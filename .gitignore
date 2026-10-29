@@ -1,0 +1,7 @@
+# Local settings hold the iDRAC password
+.env
+.env.*
+!env.example
+
+# Runtime state written by the container
+state/

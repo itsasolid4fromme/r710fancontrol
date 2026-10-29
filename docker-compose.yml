@@ -1,0 +1,43 @@
+services:
+  # The controller: the only thing that talks to the iDRAC.
+  r710-fan:
+    build: .
+    image: r710-fan:local
+    container_name: r710-fan
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    volumes:
+      - ./state:/state
+    # Leave time for the shutdown handler to hand the fans back to Dell control.
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # The web page. It reads the controller's status files and writes the override
+  # file the controller watches; it never contacts the iDRAC itself.
+  r710-fan-web:
+    build: .
+    image: r710-fan:local
+    container_name: r710-fan-web
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    entrypoint: ["python3", "/usr/local/share/r710-fan/web/server.py"]
+    ports:
+      - "${WEB_PORT:-8710}:8080"
+    volumes:
+      - ./state:/state
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3)"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
